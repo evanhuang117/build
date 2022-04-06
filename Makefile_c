@@ -1,0 +1,30 @@
+PROJECT_NAME=lab5
+SRC = $(wildcard *.c)
+HEADERS = $(wildcard *.h)
+OBJS = $(SRC:.c=.o)
+CCFLAGS=-g3 -std=gnu99 -pedantic -Wall -Werror=implicit-function-declaration ${CFLAGS}
+LDFLAGS=
+# target all means all targets currently defined in this file
+all: $(PROJECT_NAME) $(PROJECT_NAME).zip   
+
+# this target is the .zip file that must be submitted to Carmen
+$(PROJECT_NAME).zip: Makefile $(SRC) $(HEADERS) README.txt
+	zip -r $(PROJECT_NAME).zip $^
+
+$(PROJECT_NAME): $(OBJS) 
+	gcc ${CCFLAGS} -o $(PROJECT_NAME) $^ ${CCFLAGS} ${LDFLAGS}
+
+%.o: %.c
+	gcc ${CCFLAGS} -c -o $@ $< ${LDFLAGS}
+
+clean:
+	$(RM) *.o $(PROJECT_NAME) $(PROJECT_NAME).zip 
+	$(RM) -r test
+
+test: clean all
+	mkdir test \
+	&& cd test \
+	&& cp ../$(PROJECT_NAME).zip . \
+	&& unzip $(PROJECT_NAME).zip \
+	&& make \
+	&& ./$(PROJECT_NAME)

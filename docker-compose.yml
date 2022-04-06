@@ -1,0 +1,253 @@
+version: "3.5"
+services:
+  syncthing:
+    image: linuxserver/syncthing
+    container_name: syncthing
+    hostname: syncthing #optional
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - /home/evan/syncthing:/config
+      - /hdd1/syncthing:/syncthing
+        #  ports:
+        # - 8384:8384
+        #  - 22000:22000/tcp
+        # - 22000:22000/udp
+        # - 21027:21027/udp
+    restart: "unless-stopped"
+    networks:
+      lan:
+        ipv4_address: 192.168.1.120
+
+  jellyfin:
+    image: linuxserver/jellyfin
+    container_name: jellyfin
+    hostname: jellyfin
+    user: root:root
+    volumes:
+      - /home/evan/jellyfin/jellyfin-config:/config
+      - /home/evan/jellyfin/jellyfin-cache:/cache
+      - /hdd1:/media
+      - /home/evan:/root
+    restart: "unless-stopped"
+    ports:
+      - 6900:8096
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.2
+
+
+  emby:
+    image: emby/embyserver
+    container_name: emby
+    hostname: emby
+    user: root:root
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /home/evan/emby/emby-config:/config
+      - /hdd1:/media
+      - /home/evan:/root
+    ports:
+      - 6905:8096
+      - 6906:8920
+    restart: unless-stopped
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.8
+
+  transmission-openvpn:
+    image: haugene/transmission-openvpn
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    cap_add:
+        - NET_ADMIN
+    volumes:
+        - /hdd1/downloads:/data
+        - /home/evan/Windscribe-Zurich-Alphorn.ovpn:/etc/openvpn/custom/default.ovpn
+    restart: always
+    environment:
+        - OPENVPN_PROVIDER=CUSTOM
+        - LOCAL_NETWORK=192.168.1.0/24
+        - TRANSMISSION_DOWNLOAD_QUEUE_SIZE=15
+        - HEALTH_CHECK_HOST=google.com
+        - TRANSMISSION_WEB_UI=kettu 
+
+    logging:
+        driver: json-file
+        options:
+            max-size: 10m
+    ports:
+        - 9091:9091
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.3
+        
+
+    logging:
+        driver: json-file
+        options:
+            max-size: 10m
+    ports:
+        - 6969:9091
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.69
+
+
+  sonarr:
+    image: ghcr.io/linuxserver/sonarr
+    container_name: sonarr
+    hostname: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - /home/evan/sonarr:/config
+      - /hdd1/tv-shows:/tv #optional
+      - /hdd1/downloads/completed:/data #optional
+    restart: unless-stopped
+    ports:
+      - 6902:8989
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.4
+
+  jackett:
+    image: ghcr.io/linuxserver/jackett
+    container_name: jackett
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - AUTO_UPDATE=true #optional
+    volumes:
+      - /home/evan/jackett:/config
+    ports:
+      - 6903:9117
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.5
+    restart: unless-stopped
+
+  radarr:
+    image: ghcr.io/linuxserver/radarr
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    volumes:
+      - /home/evan/radarr:/config
+      - /hdd1/movies:/movies #optional
+      - /hdd1/downloads/completed:/data #optional
+    ports:
+      - 6904:7878
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.6
+    restart: unless-stopped
+
+  autoheal:
+    restart: always
+    image: willfarrell/autoheal
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  ombi:
+    image: lscr.io/linuxserver/ombi
+    container_name: ombi
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - BASE_URL=/ombi #optional
+    volumes:
+      - /home/evan/ombi:/config
+    ports:
+      - 6908:3579
+    restart: unless-stopped
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.9
+
+  swag:
+    image: ghcr.io/linuxserver/swag
+    container_name: swag
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - URL=huang.cloud
+      - SUBDOMAINS=wildcard
+      - VALIDATION=dns
+      - DNSPLUGIN=cloudflare
+    volumes:
+      - /home/evan/swag:/config
+    ports:
+      - 444:443
+      - 81:80
+    restart: unless-stopped
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.10
+
+  index:
+    image: evanhuang117/huang-cloud:latest
+    container_name: index
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    restart: unless-stopped
+    volumes:
+      - /home/evan/index:/config
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.11
+
+  jellyfin-clean:
+    image: linuxserver/jellyfin
+    container_name: jellyfin-clean
+    hostname: jellyfin-clean
+    user: root:root
+    volumes:
+      - /home/evan/jellyfin-clean/jellyfin-config:/config
+      - /home/evan/jellyfin-clean/jellyfin-cache:/cache
+      - /hdd1/tv-shows:/tv-shows
+      - /hdd1/movies:/movies
+    restart: "unless-stopped"
+    ports:
+      - 6909:8096
+    networks:
+      jelly-bridge:
+        ipv4_address: 172.20.0.12
+
+networks:
+  lan:
+    name: lan
+    driver: macvlan
+    driver_opts:
+      parent: ens18
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+          #  gateway: 192.168.1.1
+  
+  jelly-bridge:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1 
